@@ -11,44 +11,66 @@ TRAFFIC_SIGN_CLASSES = {
 
 class SignCounter:
 
-    def __init__(self, lost_track_buffer=90):
-        self.tracker = sv.ByteTrack(lost_track_buffer=lost_track_buffer)
-        self.counted_ids = set()
-        self.total_count = 0
+    def __init__(self, lost_track_buffer=150,frames_to_confirm=4):
+        self.tracker           = sv.ByteTrack(lost_track_buffer=lost_track_buffer)
+        self.counted_ids       = set()
+        self.total_count       = 0
+        self.frames_to_confirm=frames_to_confirm
         self.detection_history = []
-        self.first_seen_times = {}
+        self.first_seen_times  = {}
         self.current_frame_signs = []
+
+        # counts how many consecutive frames each tracker_id has been seen
+        # key = tracker_id, value = integer count
+        self.consecutive_frames = {}
 
     def _to_sv_detections(self, houcine_detections):
         sign_dets = [d for d in houcine_detections if d["class_id"] in TRAFFIC_SIGN_CLASSES]
         if len(sign_dets) == 0:
             return sv.Detections.empty()
-        xyxy       = np.array([list(d["bbox"])    for d in sign_dets], dtype=np.float32)
-        confidence = np.array([d["confidence"]     for d in sign_dets], dtype=np.float32)
-        class_id   = np.array([d["class_id"]       for d in sign_dets], dtype=int)
+        xyxy       = np.array([list(d["bbox"])   for d in sign_dets], dtype=np.float32)
+        confidence = np.array([d["confidence"]    for d in sign_dets], dtype=np.float32)
+        class_id   = np.array([d["class_id"]      for d in sign_dets], dtype=int)
         return sv.Detections(xyxy=xyxy, confidence=confidence, class_id=class_id)
 
     def process_frame(self, houcine_detections):
         self.current_frame_signs = []
         sv_detections = self._to_sv_detections(houcine_detections)
         tracked = self.tracker.update_with_detections(sv_detections)
+
         if len(tracked) == 0:
             return self._build_output()
+
+        active_ids_this_frame = set()
+
         for i in range(len(tracked)):
             tracker_id = int(tracked.tracker_id[i])
             class_id   = int(tracked.class_id[i])
             label      = TRAFFIC_SIGN_CLASSES.get(class_id, "unknown")
             confidence = float(tracked.confidence[i])
             bbox       = tracked.xyxy[i].tolist()
+
+            active_ids_this_frame.add(tracker_id)
+
+            # increment consecutive frame counter for this id
+            self.consecutive_frames[tracker_id] = self.consecutive_frames.get(tracker_id, 0) + 1
+
+            # only count after seen for frames_to_confirm consecutive frames
             if tracker_id not in self.counted_ids:
-                self.counted_ids.add(tracker_id)
-                self.total_count += 1
-                self.first_seen_times[tracker_id] = time.time()
-                self._add_to_history(tracker_id, label, confidence, bbox)
-                state = "NEW"
+                if self.consecutive_frames[tracker_id] >= self.frames_to_confirm:
+                    self.counted_ids.add(tracker_id)
+                    self.total_count += 1
+                    self.first_seen_times[tracker_id] = time.time()
+                    self._add_to_history(tracker_id, label, confidence, bbox)
+                    print(f"[NEW]  id={tracker_id}  '{label}'  conf={confidence:.2f}  total={self.total_count}")
+                    state = "NEW"
+                else:
+                    # seen but not confirmed yet — do not count, do not show
+                    continue
             else:
                 self._update_history(tracker_id, confidence)
                 state = "CONTINUING"
+
             self.current_frame_signs.append({
                 "tracker_id" : tracker_id,
                 "label"      : label,
@@ -56,6 +78,12 @@ class SignCounter:
                 "state"      : state,
                 "bbox"       : bbox
             })
+
+        # reset consecutive counter for ids not seen this frame
+        for tid in list(self.consecutive_frames.keys()):
+            if tid not in active_ids_this_frame:
+                self.consecutive_frames[tid] = 0
+
         return self._build_output()
 
     def _add_to_history(self, tracker_id, label, confidence, bbox):

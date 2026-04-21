@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Vision Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { 
+                        sans: ['Outfit', 'sans-serif'],
+                        mono: ['Share Tech Mono', 'monospace']
+                    },
+                    colors: {
+                        dark: '#0a0a0a',
+                        asphalt: '#171717',
+                        highwayBlue: '#005b9f',
+                        warningYellow: '#f59e0b',
+                        stopRed: '#ef4444',
+                        goGreen: '#10b981'
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'dash-move': 'dash 20s linear infinite',
+                    },
+                    keyframes: {
+                        dash: {
+                            '0%': { backgroundPosition: '0px 0px' },
+                            '100%': { backgroundPosition: '0px 1000px' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { 
+            background-color: #0a0a0a;
+            color: #f3f4f6; 
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Animated Highway Lanes Background */
+        .highway-bg::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: 
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: -2;
+        }
+        .highway-bg::after {
+            content: "";
+            position: fixed;
+            top: 0; left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 100vh;
+            background: repeating-linear-gradient(to bottom, #f59e0b 0, #f59e0b 40px, transparent 40px, transparent 80px);
+            z-index: -1;
+            opacity: 0.15;
+            animation: dash 5s linear infinite;
+        }
+
+        .glass { 
+            background: rgba(23, 23, 23, 0.85); 
+            backdrop-filter: blur(20px); 
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05); 
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        
+        .card-traffic {
+            background: linear-gradient(145deg, rgba(38,38,38,0.8) 0%, rgba(23,23,23,0.9) 100%);
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .card-traffic::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0;
+            height: 100%; width: 4px;
+            background: var(--card-color, #3b82f6);
+            opacity: 0.5;
+            transition: all 0.3s ease;
+        }
+        
+        .card-traffic:hover::before {
+            opacity: 1;
+            width: 6px;
+        }
+
+        .card-traffic:hover {
+            transform: translateX(4px);
+            background: linear-gradient(145deg, rgba(64,64,64,0.8) 0%, rgba(23,23,23,0.9) 100%);
+        }
+
+        .video-feed {
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(0,0,0,0.5);
+            background-color: #050505;
+        }
+        
+        .stripes {
+            background: repeating-linear-gradient(
+                -45deg,
+                rgba(245, 158, 11, 0.3),
+                rgba(245, 158, 11, 0.3) 10px,
+                rgba(0, 0, 0, 0.3) 10px,
+                rgba(0, 0, 0, 0.3) 20px
+            );
+        }
+    </style>
+</head>
+<body class="py-6 px-4 sm:px-10 flex flex-col font-sans highway-bg">
+    
+    <!-- Top Alert Stripe -->
+    <div class="fixed top-0 left-0 w-full h-2 stripes z-50"></div>
+
+    <!-- Navbar -->
+    <header class="flex justify-between items-center mb-8 glass rounded-2xl px-6 py-4 mt-2">
+        <div class="flex items-center gap-5">
+            <div class="w-14 h-14 rounded-2xl bg-highwayBlue flex items-center justify-center border-2 border-blue-400/30 shadow-[0_0_15px_rgba(0,91,159,0.5)]">
+                <i class="fa-solid fa-route text-white text-2xl"></i>
+            </div>
+            <div>
+                <div class="flex items-center gap-3">
+                    <h1 class="text-3xl font-bold tracking-tight text-white font-mono uppercase">V-Route Monitor</h1>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-warningYellow/20 text-warningYellow border border-warningYellow/30">AI ASSIST</span>
+                </div>
+                <p class="text-sm text-gray-400 font-medium tracking-wide">Real-Time Traffic & Object Detection Engine</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="glass px-5 py-2 rounded-xl flex items-center gap-3 border-b-2 border-b-goGreen/50">
+                <div class="relative flex h-3 w-3">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-goGreen opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-3 w-3 bg-goGreen shadow-[0_0_10px_#10b981]"></span>
+                </div>
+                <span class="text-sm font-bold text-gray-200 tracking-widest font-mono uppercase">System Live</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Grid -->
+    <main class="grid grid-cols-1 lg:grid-cols-12 gap-8 flex-1">
+        
+        <!-- Left Sidebar: Telemetry -->
+        <aside class="col-span-1 lg:col-span-3 flex flex-col gap-6">
+            
+            <div class="glass rounded-3xl p-6 h-full flex flex-col relative overflow-hidden">
+                <!-- Decorative Highway Sign Element -->
+                <div class="absolute top-0 right-0 w-16 h-16 bg-highwayBlue rounded-bl-full opacity-20"></div>
+
+                <div class="flex items-center gap-3 mb-6 pb-4 border-b border-white/10">
+                    <i class="fa-solid fa-satellite-dish text-blue-400 text-xl"></i>
+                    <h2 class="text-lg font-bold text-gray-100 font-mono tracking-wide uppercase">Telemetry Status</h2>
+                </div>
+                
+                <div class="flex flex-col gap-5 flex-1">
+                    <!-- Persons -->
+                    <div class="card-traffic rounded-xl p-4 flex items-center justify-between group" style="--card-color: #f59e0b;">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-lg bg-warningYellow/10 flex items-center justify-center border border-warningYellow/20 group-hover:bg-warningYellow/20 transition-all">
+                                <i class="fa-solid fa-person-walking text-warningYellow text-xl"></i>
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-xs text-gray-500 uppercase font-bold tracking-wider">Pedestrians</span>
+                                <span class="text-gray-200 font-semibold tracking-wide">In Zone</span>
+                            </div>
+                        </div>
+                        <span class="text-3xl font-mono font-bold text-warningYellow drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]" id="persons-count">0</span>
+                    </div>
+
+                    <!-- Stop Signs -->
+                    <div class="card-traffic rounded-xl p-4 flex items-center justify-between group" style="--card-color: #ef4444;">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-lg bg-stopRed/10 flex items-center justify-center border border-stopRed/20 group-hover:bg-stopRed/20 transition-all">
+                                <i class="fa-solid fa-octagon text-stopRed text-xl"></i>
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-xs text-gray-500 uppercase font-bold tracking-wider">Signage</span>
+                                <span class="text-gray-200 font-semibold tracking-wide">Stop Signs</span>
+                            </div>
+                        </div>
+                        <span class="text-3xl font-mono font-bold text-stopRed drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]" id="stop-signs-count">0</span>
+                    </div>
+
+                    <!-- Traffic Lights -->
+                    <div class="card-traffic rounded-xl p-4 flex items-center justify-between group" style="--card-color: #10b981;">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-lg bg-goGreen/10 flex items-center justify-center border border-goGreen/20 group-hover:bg-goGreen/20 transition-all">
+                                <i class="fa-solid fa-traffic-light text-goGreen text-xl"></i>
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-xs text-gray-500 uppercase font-bold tracking-wider">Signals</span>
+                                <span class="text-gray-200 font-semibold tracking-wide">Traffic Lights</span>
+                            </div>
+                        </div>
+                        <span class="text-3xl font-mono font-bold text-goGreen drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" id="lights-count">0</span>
+                    </div>
+
+                    <!-- Abdssamad's Unique Tracker -->
+                    <div class="card-traffic rounded-xl p-4 flex items-center justify-between group" style="--card-color: #8b5cf6;">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-lg bg-purple-500/10 flex items-center justify-center border border-purple-500/20 group-hover:bg-purple-500/20 transition-all">
+                                <i class="fa-solid fa-memory text-purple-500 text-xl"></i>
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-xs text-gray-500 uppercase font-bold tracking-wider">AI Tracking</span>
+                                <span class="text-gray-200 font-semibold tracking-wide">Unique Signs</span>
+                            </div>
+                        </div>
+                        <span class="text-3xl font-mono font-bold text-purple-500 drop-shadow-[0_0_8px_rgba(139,92,246,0.5)]" id="unique-signs-count">0</span>
+                    </div>
+                </div>
+
+                <!-- Performance Bottom -->
+                <div class="mt-8 pt-5 border-t border-white/10 bg-asphalt/50 rounded-xl p-4">
+                    <p class="text-xs text-gray-400 mb-3 font-mono uppercase tracking-widest flex justify-between items-center">
+                        <span class="flex items-center gap-2"><i class="fa-solid fa-microchip text-gray-500"></i> Engine FPS</span>
+                        <span class="text-blue-400 font-bold text-lg"><span id="fps-counter">0</span></span>
+                    </p>
+                    <div class="w-full bg-gray-900 rounded-md h-2 overflow-hidden border border-gray-800">
+                        <div class="bg-blue-500 h-full rounded-md w-full animate-pulse-slow shadow-[0_0_10px_#3b82f6]"></div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Video -->
+        <section class="col-span-1 lg:col-span-9 flex flex-col glass rounded-3xl p-3 h-full relative group">
+            
+            <div class="relative w-full h-full bg-dark rounded-[1.25rem] overflow-hidden video-feed flex items-center justify-center min-h-[500px]">
+                
+                <!-- HUD Overlay Frame Elements for Sci-Fi / Vehicle Feel -->
+                <div class="absolute top-4 left-4 w-8 h-8 border-t-2 border-l-2 border-blue-500/50 rounded-tl-lg z-20 transition-all duration-500 group-hover:scale-110"></div>
+                <div class="absolute top-4 right-4 w-8 h-8 border-t-2 border-r-2 border-blue-500/50 rounded-tr-lg z-20 transition-all duration-500 group-hover:scale-110"></div>
+                <div class="absolute bottom-4 left-4 w-8 h-8 border-b-2 border-l-2 border-blue-500/50 rounded-bl-lg z-20 transition-all duration-500 group-hover:scale-110"></div>
+                <div class="absolute bottom-4 right-4 w-8 h-8 border-b-2 border-r-2 border-blue-500/50 rounded-br-lg z-20 transition-all duration-500 group-hover:scale-110"></div>
+
+                <!-- Video Info Head -->
+                <div class="absolute top-0 left-0 w-full p-6 flex justify-between items-start z-10 bg-gradient-to-b from-black/80 via-black/40 to-transparent">
+                    <div class="flex flex-col gap-2">
+                        <span class="px-4 py-1.5 rounded bg-black/60 backdrop-blur-md border border-white/10 text-xs font-mono text-gray-200 tracking-[0.2em] flex items-center gap-2">
+                            <i class="fa-solid fa-car-side text-blue-400"></i> FORWARD DASHCAM 
+                            <span class="w-2 h-2 rounded-full bg-stopRed animate-pulse ml-2"></span>
+                        </span>
+                        <span class="text-[10px] text-gray-400 font-mono tracking-widest pl-1 opacity-70">REC // T-00:00:00</span>
+                    </div>
+                    <div>
+                        <span class="px-4 py-1.5 rounded bg-highwayBlue/20 backdrop-blur-md border border-highwayBlue/50 text-xs font-mono text-blue-200 tracking-[0.1em] flex items-center gap-2 shadow-[0_0_15px_rgba(0,91,159,0.3)]">
+                            <i class="fa-solid fa-bolt text-warningYellow"></i> YOLOv8 VISION
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Reticle Overlay (center subtle crosshair) -->
+                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 border border-white/5 rounded-full z-10 flex items-center justify-center pointer-events-none opacity-50">
+                    <div class="w-1 h-1 bg-white/20 rounded-full"></div>
+                </div>
+
+                <!-- Actual Video Feed -->
+                <img id="video-stream" src="/video_feed" alt="Video Stream" class="w-full h-full object-contain relative z-0" />
+            </div>
+            
+        </section>
+        
+    </main>
+
+    <script>
+        // Start polling for real-time metrics every 500ms
+        setInterval(async () => {
+            try {
+                const response = await fetch('/metrics');
+                if(!response.ok) return;
+                const data = await response.json();
+                
+                document.getElementById('persons-count').innerText = data.persons_in_zone;
+                document.getElementById('stop-signs-count').innerText = data.stop_signs;
+                document.getElementById('lights-count').innerText = data.traffic_lights;
+                document.getElementById('unique-signs-count').innerText = data.total_unique_signs;
+                document.getElementById('fps-counter').innerText = Math.round(data.fps);
+            } catch (error) {
+                console.error("Error fetching metrics:", error);
+            }
+        }, 500);
+    </script>
+</body>
+</html>
